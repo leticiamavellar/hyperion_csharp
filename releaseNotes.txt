@@ -1,0 +1,4 @@
+2018-02-13
+v2.0
+Featured - Initial GitHub public repository release
+Features - .NET Standard v1.3 compatible
