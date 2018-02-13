@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2027
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hyperion.Communication", "Hyperion.Communication\Hyperion.Communication.csproj", "{5F106D56-F19B-488E-9AFB-D0A76D6BDB1A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hyperion.Demo", "Hyperion.Demo\Hyperion.Demo.csproj", "{4C8D3E65-F418-422A-9930-A19A74936C5B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5F106D56-F19B-488E-9AFB-D0A76D6BDB1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F106D56-F19B-488E-9AFB-D0A76D6BDB1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F106D56-F19B-488E-9AFB-D0A76D6BDB1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F106D56-F19B-488E-9AFB-D0A76D6BDB1A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C8D3E65-F418-422A-9930-A19A74936C5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C8D3E65-F418-422A-9930-A19A74936C5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C8D3E65-F418-422A-9930-A19A74936C5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C8D3E65-F418-422A-9930-A19A74936C5B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {800B09DD-78D9-4E26-B750-58BDBEBD0018}
+	EndGlobalSection
+EndGlobal
