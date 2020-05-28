@@ -1,3 +1,7 @@
+2020-05-28
+v2.2.0
+Featured - Updated FP accelerometer definitions.
+Featured - Update example code to showcase FP creation and sensor stream.
 2018-02-13
 v2.0
 Featured - Initial GitHub public repository release
