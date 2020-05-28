@@ -1,27 +1,36 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard1.3</TargetFramework>
     <AssemblyName>MicronOptics.Hyperion.Communication</AssemblyName>
     <RootNamespace>MicronOptics.Hyperion.Communication</RootNamespace>
-    <Version>2.0.0</Version>
-    <Company>Micron Optics</Company>
+    <Version>2.2.0</Version>
+    <Company>Luna Innovations</Company>
     <Product>Hyperion</Product>
     <Authors>Micron Optics</Authors>
     <Description>Provides an easy to use library for communicating with Hyperion based instrumentation.</Description>
-    <Copyright>MOI 2018</Copyright>
+    <Copyright>Luna Innovations 2020</Copyright>
     <RepositoryUrl>https://github.com/MicronOptics/hyperion-client-sdk</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>MOI;Hyperion;Micron Optics</PackageTags>
-    <PackageReleaseNotes>Version 2.0
-- Update Fabry-Perot Sensor to use new configuration and computation algorithm.
+    <PackageTags>MOI;Hyperion;Micron Optics;Luna</PackageTags>
+    <PackageReleaseNotes>Version 2.2
+- Update Fabry-Perot Sensor definitions.
 </PackageReleaseNotes>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>MOI_Logo_Vert_Type-1_3C_White Bkgrd and Border 128x128.jpeg</PackageIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\MOI_Logo_Vert_Type-1_3C_White Bkgrd and Border 128x128.jpeg">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>
