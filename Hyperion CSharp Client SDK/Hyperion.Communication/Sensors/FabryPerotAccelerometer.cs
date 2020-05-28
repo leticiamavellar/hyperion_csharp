@@ -9,7 +9,7 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 	{
 		#region -- Constants --
 
-		private const int _FabryPerotConfigurationVersion = 2;
+		private const int _FabryPerotConfigurationVersion = 1;
 
 		private const int _MaximumNumberOfPeaksPerSensor = 100; // 20 nm span with 50 Ghz produces approximately 50 values...x2 for margin.
 
@@ -20,16 +20,15 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 
 		private const double _WavelengthBandHalfWidth = 7.5; // in nm
 
-		private const double _DnFromPeakOverRangeThresholdDefault = 0.5;
-		private const double _DnFromPeakThresholdDefault = 0.8;
-		private const double _RecenterThresholdDefault = 1.0e-5;
+		private const double _RecenterGainDefault = 0.1;
+		private const double _RecenterThresholdHighDefault = 1.0;
+		private const double _RecenterThresholdLowDefault = 0.005;
 
 		private const int _WavelengthBandFieldOffset = 0;
 		private const int _CalibrationFactorFieldOffset = 1;
-
-		private const int _DnFromPeakOverRangeThresholdOffset = 2;
-		private const int _DnFromPeakThresholdOffset = 3;
-		private const int _RecenterThresholdOffset = 4;
+		private const int _RecenterGainFieldOffset = 2;
+		private const int _RecenterThresholdHighFieldOffset = 3;
+		private const int _RecenterThresholdLowFieldOffset = 4;
 
 		#endregion
 
@@ -40,9 +39,13 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 		private readonly double _calibrationFactor;
 		private readonly double _inverseCalibrationFactor; // avoid repeated divisions
 
-		private double _dnFromPeakOverRangeThreshold = _DnFromPeakOverRangeThresholdDefault;
-		private double _dnFromPeakThreshold = _DnFromPeakThresholdDefault;
-		private double _recenterThresholdLow = _RecenterThresholdDefault;
+		private readonly double _recenterGain;
+		private readonly double _recenterThresholdHigh;
+		private readonly double _recenterThresholdLow;
+
+		private readonly bool _fixedOrientation;
+
+		private readonly int _fpSensorVersion;
 
 		#endregion
 
@@ -50,8 +53,11 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 		#region -- Constructors --
 
 		private FabryPerotAccelerometer(Guid id, string name, string model, int dutChannelIndex, double distance, double wavelengthBand, double calibrationFactor,
-			double dnFromPeakOverRangeThreshold, double dnFromPeakThreshold, double recenterThresholdLow) : base(id, name, model, dutChannelIndex, distance)
+			double recenterGain, double recenterThresholdHigh, double recenterThresholdLow) : base(id, name, model, dutChannelIndex, distance)
 		{
+			// FP Sensor Version
+			_fpSensorVersion = 1;
+
 			// Center wavelength and high/low boundaries
 			_wavelengthBand = wavelengthBand;
 
@@ -61,11 +67,32 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 			_inverseCalibrationFactor = 1.0 / calibrationFactor;
 
 			// Gain
-			_dnFromPeakOverRangeThreshold = dnFromPeakOverRangeThreshold;
+			_recenterGain = recenterGain;
 
 			// Thresholds
-			_dnFromPeakThreshold = dnFromPeakThreshold;
+			_recenterThresholdHigh = recenterThresholdHigh;
 			_recenterThresholdLow = recenterThresholdLow;
+
+			// Fabry-Perot Accelerometers need to be updated every cycle regardless of user request
+			IsActive = true;
+		}
+
+		private FabryPerotAccelerometer(Guid id, string name, string model, int dutChannelIndex, double distance, double wavelengthBand, double calibrationFactor,
+			bool fixedOrientation) : base(id, name, model, dutChannelIndex, distance)
+		{
+			// FP Sensor Version
+			_fpSensorVersion = 3;
+
+			// Center wavelength and high/low boundaries
+			_wavelengthBand = wavelengthBand;
+
+			// Store the calibration factor and store the inverse to use in multiplication that computes the output
+			// in engineering units (g). This avoids the need for repeated divisions
+			_calibrationFactor = calibrationFactor;
+			_inverseCalibrationFactor = 1.0 / calibrationFactor;
+
+			// Gain
+			_fixedOrientation = fixedOrientation;
 
 			// Fabry-Perot Accelerometers need to be updated every cycle regardless of user request
 			IsActive = true;
@@ -76,12 +103,15 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 
 		#region -- Public Properties --
 
+		public int FPSesnorVersion => _fpSensorVersion;
 		public double WavelengthBand => _wavelengthBand;
 
 		public double CalibrationFactor => _calibrationFactor;
-		public double DnFromPeakOverRangeThreshold => _dnFromPeakOverRangeThreshold;
-		public double DnFromPeakThreshold => _dnFromPeakThreshold;
+		public double RecenterGain => _recenterGain;
+		public double RecenterThresholdHigh => _recenterThresholdHigh;
 		public double RecenterThresholdLow => _recenterThresholdLow;
+
+		public bool FixedOrientation => _fixedOrientation;
 
 		#endregion
 
@@ -98,67 +128,73 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 			double calibrationFactor = double.Parse(fields[_CalibrationFactorFieldOffset]);
 
 			// Recenter Gain
-			double dnFromPeakOverRangeThreshol = (fields.Length > _DnFromPeakOverRangeThresholdOffset) ?
-				double.Parse(fields[_DnFromPeakOverRangeThresholdOffset]) :
-				_DnFromPeakOverRangeThresholdDefault;
+			double recenterGain = (fields.Length > _RecenterGainFieldOffset) ?
+				double.Parse(fields[_RecenterGainFieldOffset]) :
+				_RecenterGainDefault;
 
 			// Recenter ThresholdHigh
-			double dnFromPeakThreshold = (fields.Length > _DnFromPeakThresholdOffset) ?
-				double.Parse(fields[_DnFromPeakThresholdOffset]) :
-				_DnFromPeakThresholdDefault;
+			double recenterThresholdHigh = (fields.Length > _RecenterThresholdHighFieldOffset) ?
+				double.Parse(fields[_RecenterThresholdHighFieldOffset]) :
+				_RecenterThresholdHighDefault;
 
 			// Recenter ThresholdHigh
-			double recenterThreshold = (fields.Length > _RecenterThresholdOffset) ?
-				double.Parse(fields[_RecenterThresholdOffset]) :
-				_RecenterThresholdDefault;
+			double recenterThresholdLow = (fields.Length > _RecenterThresholdLowFieldOffset) ?
+				double.Parse(fields[_RecenterThresholdLowFieldOffset]) :
+				_RecenterThresholdLowDefault;
 
 
 			return new FabryPerotAccelerometer(id, name, model, dutChannelIndex, distance, wavelengthBand, calibrationFactor,
-				dnFromPeakOverRangeThreshol, dnFromPeakThreshold, recenterThreshold);
+				recenterGain, recenterThresholdHigh, recenterThresholdLow);
 		}
 
 		internal static FabryPerotAccelerometer Create(Guid id, string name, string model, int dutChannelIndex, double distance,
 			byte[] configurationBytes, ref int offset)
 		{
-			double dnFromPeakOverRangeThreshold = _DnFromPeakOverRangeThresholdDefault;
-			double dnFromPeakThreshold = _DnFromPeakThresholdDefault;
-			double recenterThresholdLow = _RecenterThresholdDefault;
-
 			// First two bytes are the Fabry-Perot configuration version
 			int fabryPerotConfigurationVersion = BitConverter.ToUInt16(configurationBytes, offset);
 			offset += sizeof(UInt16);
 
-			// Wavelength Band
-			double wavelengthBand = BitConverter.ToDouble(configurationBytes, offset);
-			offset += sizeof(double);
-
-			// Calibration Factor
-			double calibrationFactor = BitConverter.ToDouble(configurationBytes, offset);
-			offset += sizeof(double);
-
 			if (fabryPerotConfigurationVersion == 1)
 			{
-				// Version 1 had different internally tweakable parameters. If a version 1 is loaded, default
-				// all of the new paramaters to defeault values
-				return new FabryPerotAccelerometer(id, name, model, dutChannelIndex, distance, wavelengthBand, calibrationFactor,
-					dnFromPeakOverRangeThreshold, dnFromPeakThreshold, recenterThresholdLow);
-			}
-			else if (fabryPerotConfigurationVersion == 2)
-			{
+				// Wavelength Band
+				double wavelengthBand = BitConverter.ToDouble(configurationBytes, offset);
+				offset += sizeof(double);
+
+				// Calibration Factor
+				double calibrationFactor = BitConverter.ToDouble(configurationBytes, offset);
+				offset += sizeof(double);
+
 				// Recenter Gain
-				dnFromPeakOverRangeThreshold = BitConverter.ToDouble(configurationBytes, offset);
+				double recenterGain = BitConverter.ToDouble(configurationBytes, offset);
 				offset += sizeof(double);
 
 				// Recenter ThresholdHigh
-				dnFromPeakThreshold = BitConverter.ToDouble(configurationBytes, offset);
+				double recenterThresholdHigh = BitConverter.ToDouble(configurationBytes, offset);
 				offset += sizeof(double);
 
 				// Recenter ThresholdHigh
-				recenterThresholdLow = BitConverter.ToDouble(configurationBytes, offset);
+				double recenterThresholdLow = BitConverter.ToDouble(configurationBytes, offset);
 				offset += sizeof(double);
 
 				return new FabryPerotAccelerometer(id, name, model, dutChannelIndex, distance, wavelengthBand, calibrationFactor,
-					dnFromPeakOverRangeThreshold, dnFromPeakThreshold, recenterThresholdLow);
+					recenterGain, recenterThresholdHigh, recenterThresholdLow);
+			}
+			else if (fabryPerotConfigurationVersion == 3)
+			{
+				// Wavelength Band
+				double wavelengthBand = BitConverter.ToDouble(configurationBytes, offset);
+				offset += sizeof(double);
+
+				// Calibration Factor
+				double calibrationFactor = BitConverter.ToDouble(configurationBytes, offset);
+				offset += sizeof(double);
+
+				// Fixed Orientation
+				bool fixedOrientation = configurationBytes[offset] != 0;
+				offset += sizeof(byte);
+
+				return new FabryPerotAccelerometer(id, name, model, dutChannelIndex, distance, wavelengthBand, calibrationFactor,
+					fixedOrientation);
 			}
 			else
 			{
@@ -176,8 +212,8 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 				.Concat(BitConverter.GetBytes((UInt16)_FabryPerotConfigurationVersion))
 				.Concat(BitConverter.GetBytes(_wavelengthBand))
 				.Concat(BitConverter.GetBytes(_calibrationFactor))
-				.Concat(BitConverter.GetBytes(_dnFromPeakOverRangeThreshold))
-				.Concat(BitConverter.GetBytes(_dnFromPeakThreshold))
+				.Concat(BitConverter.GetBytes(_recenterGain))
+				.Concat(BitConverter.GetBytes(_recenterThresholdHigh))
 				.Concat(BitConverter.GetBytes(_recenterThresholdLow));
 		}
 
@@ -188,8 +224,8 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 				{
 					"Wavelength Band (nm): " + _wavelengthBand,
 					"Calibration Factor (nm/g): " + _calibrationFactor,
-					"Over Range Threshold: " + _dnFromPeakOverRangeThreshold,
-					"Peak Threshold: " + _dnFromPeakThreshold,
+					"Recenter Gain: " + _recenterGain,
+					"Recenter Threshold High: " + _recenterThresholdHigh,
 					"Recenter Threshold Low: " + _recenterThresholdLow
 				});
 		}
@@ -197,4 +233,3 @@ namespace MicronOptics.Hyperion.Communication.Sensors
 		#endregion
 	}
 }
-
